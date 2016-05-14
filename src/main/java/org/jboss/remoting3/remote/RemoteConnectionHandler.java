@@ -37,6 +37,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.net.ssl.SSLSession;
 
+import static org.xnio.Bits.anyAreSet;
+
 import org.jboss.remoting3.Channel;
 import org.jboss.remoting3.NotOpenException;
 import org.jboss.remoting3.ProtocolException;
@@ -354,6 +356,12 @@ final class RemoteConnectionHandler extends AbstractHandleableCloseable<Connecti
                                 Long.valueOf(inboundMessageSizeOptionValue), Long.valueOf(inboundMessageSize)
                             );
                         }
+                        if (anyAreSet(channelState, RECEIVED_CLOSE_REQ | SENT_CLOSE_REQ)) {
+                        	   // there's a chance that the connection was closed after the channel open was registered in the map here
+                        	   pendingChannels.remove(pendingChannel);
+                        	   result.setCancelled();
+                        	   return IoUtils.nullCancellable();
+                         } 
 
                         Pooled<ByteBuffer> pooled = remoteConnection.allocate();
                         try {
